@@ -442,8 +442,23 @@ class WaymoDataset(DatasetTemplate):
                 distance_thresh=1000, fake_gt_infos=self.dataset_cfg.get('INFO_WITH_FAKELIDAR', False)
             )
             ap_result_str = '\n'
-            for key in ap_dict:
+            overall_result = {}
+            for idx, key in enumerate(ap_dict):
+                level_metric = key.split('_')[5]   # '1/AP', '2/AP', '1/APH', '2/APH'
+                key_overall = "LEVEL_" + level_metric + '_Overall'
+                if key_overall in overall_result.keys():
+                    overall_result[key_overall]["value"] = overall_result[key_overall]["value"] + ap_dict[key][0]
+                    overall_result[key_overall]["count"] = overall_result[key_overall]["count"] + 1
+                else:
+                    overall_result[key_overall] = {}
+                    overall_result[key_overall]["value"] = ap_dict[key][0]
+                    overall_result[key_overall]["count"] = 1
+
                 ap_dict[key] = ap_dict[key][0]
+                ap_result_str += '%s: %.4f \n' % (key, ap_dict[key])
+
+            for key in overall_result:
+                ap_dict[key] = overall_result[key]['value'] / overall_result[key]['count']
                 ap_result_str += '%s: %.4f \n' % (key, ap_dict[key])
 
             return ap_result_str, ap_dict

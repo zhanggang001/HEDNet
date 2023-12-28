@@ -169,7 +169,7 @@ class OpenPCDetWaymoDetectionMetricsEstimator(tf.test.TestCase):
         )
 
     def eval_value_ops(self, sess, graph, metrics):
-        return {item[0]: sess.run([item[1][0]]) for item in metrics.items()}
+        return {item[0]: sess.run([item[1][0]]) for item in metrics.items() if 'SIGN' not in item[0] and 'APH' in item[0]} # only show APH, filter out 'SIGN'
 
     def mask_by_distance(self, distance_thresh, boxes_3d, *args):
         mask = np.linalg.norm(boxes_3d[:, 0:2], axis=1) < distance_thresh + 0.5

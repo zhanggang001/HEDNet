@@ -69,17 +69,17 @@ class DataBaseSampler(object):
     def __setstate__(self, d):
         self.__dict__.update(d)
 
-    def __del__(self):
-        if self.use_shared_memory:
-            self.logger.info('Deleting GT database from shared memory')
-            cur_rank, num_gpus = common_utils.get_dist_info()
-            sa_key = self.sampler_cfg.DB_DATA_PATH[0]
-            if cur_rank % num_gpus == 0 and os.path.exists(f"/dev/shm/{sa_key}"):
-                SharedArray.delete(f"shm://{sa_key}")
+    # def __del__(self):
+    #     if self.use_shared_memory:
+    #         self.logger.info('Deleting GT database from shared memory')
+    #         cur_rank, num_gpus = common_utils.get_dist_info()
+    #         sa_key = self.sampler_cfg.DB_DATA_PATH[0]
+    #         if cur_rank % num_gpus == 0 and os.path.exists(f"/dev/shm/{sa_key}"):
+    #             SharedArray.delete(f"shm://{sa_key}")
 
-            if num_gpus > 1:
-                dist.barrier()
-            self.logger.info('GT database has been removed from shared memory')
+    #         if num_gpus > 1:
+    #             dist.barrier()
+    #         self.logger.info('GT database has been removed from shared memory')
 
     def load_db_to_shared_memory(self):
         self.logger.info('Loading GT database to shared memory')

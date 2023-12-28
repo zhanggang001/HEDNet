@@ -50,7 +50,7 @@ def cfg_from_list(cfg_list, config):
 
 def merge_new_config(config, new_config):
     if '_BASE_CONFIG_' in new_config:
-        with open(new_config['_BASE_CONFIG_'], 'r') as f:
+        with open(new_config['_BASE_CONFIG_'], 'r', encoding="utf-8") as f:
             try:
                 yaml_config = yaml.safe_load(f, Loader=yaml.FullLoader)
             except:
@@ -69,7 +69,7 @@ def merge_new_config(config, new_config):
 
 
 def cfg_from_yaml_file(cfg_file, config):
-    with open(cfg_file, 'r') as f:
+    with open(cfg_file, 'r', encoding="utf-8") as f:
         try:
             new_config = yaml.safe_load(f, Loader=yaml.FullLoader)
         except:
