@@ -2,6 +2,9 @@
 
 It is the official code release of [HEDNet](https://arxiv.org/pdf/2310.20234.pdf), which achieves state-of-the-art performance on large-scale Waymo Open Dataset.
 
+## TODO
+
+We will release the code of SAFDNet in the same repo in early April.
 
 ## Changelog
 [2023-12-25] **NEW:** Initial code release.
