@@ -4,7 +4,7 @@ It is the official code release of [HEDNet](https://arxiv.org/pdf/2310.20234.pdf
 
 ## TODO
 
-We will release the code of SAFDNet in the same repo in early April.
+We will release the code of [SAFDNet](https://arxiv.org/abs/2403.05817) (a fully sparse detector) in the same repo in early April.
 
 ## Changelog
 [2023-12-25] **NEW:** Initial code release.
