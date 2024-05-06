@@ -2,6 +2,7 @@ from .detector3d_template import Detector3DTemplate
 
 
 class CenterPoint(Detector3DTemplate):
+
     def __init__(self, model_cfg, num_class, dataset):
         super().__init__(model_cfg=model_cfg, num_class=num_class, dataset=dataset)
         self.module_list = self.build_networks()
@@ -31,6 +32,12 @@ class CenterPoint(Detector3DTemplate):
         }
 
         loss = loss_rpn
+
+        if hasattr(self.backbone_3d, 'adaptive_feature_diffusion') and self.backbone_3d.adaptive_feature_diffusion:
+            loss_afd, tb_dict_afd = self.backbone_3d.get_loss()
+            loss += loss_afd
+            tb_dict.update(tb_dict_afd)
+
         return loss, tb_dict, disp_dict
 
     def post_processing(self, batch_dict):

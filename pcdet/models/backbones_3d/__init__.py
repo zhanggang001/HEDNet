@@ -6,6 +6,8 @@ from .spconv_backbone_voxelnext import VoxelResBackBone8xVoxelNeXt
 from .spconv_backbone_voxelnext2d import VoxelResBackBone8xVoxelNeXt2D
 from .spconv_unet import UNetV2
 from .dsvt import DSVT
+from .hednet import HEDNet, HEDNet2D
+from .hednet import SparseHEDNet, SparseHEDNet2D
 
 __all__ = {
     'VoxelBackBone8x': VoxelBackBone8x,
@@ -19,4 +21,8 @@ __all__ = {
     'PillarBackBone8x': PillarBackBone8x,
     'PillarRes18BackBone8x': PillarRes18BackBone8x,
     'DSVT': DSVT,
+    'HEDNet': HEDNet,
+    'HEDNet2D': HEDNet2D,
+    'SparseHEDNet': SparseHEDNet,
+    'SparseHEDNet2D': SparseHEDNet2D,
 }

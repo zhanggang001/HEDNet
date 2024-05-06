@@ -1,17 +1,23 @@
 import copy
+import yaml
 import pickle
 import argparse
 import os
 from os import path as osp
+
 import torch
 from av2.utils.io import read_feather
 import numpy as np
 import multiprocessing as mp
 import pickle as pkl
-from pathlib import Path
 import pandas as pd
+from pathlib import Path
+from easydict import EasyDict
+from tqdm import tqdm
 
 from ..dataset import DatasetTemplate
+from ...ops.roiaware_pool3d import roiaware_pool3d_utils
+from ...utils import common_utils
 from .argo2_utils.so3 import yaw_to_quat, quat_to_yaw
 from .argo2_utils.constants import LABEL_ATTR
 
@@ -157,6 +163,7 @@ def prepare(root):
     assert len(bin_idx_list) == len(set(bin_idx_list))
     return ts2idx, seg_path_list, seg_split_list
 
+
 def create_argo2_infos(seg_path_list, seg_split_list, info_list, ts2idx, output_dir, save_bin, token, num_process):
     for seg_i, seg_path in enumerate(seg_path_list):
         if seg_i % num_process != token:
@@ -167,6 +174,7 @@ def create_argo2_infos(seg_path_list, seg_split_list, info_list, ts2idx, output_
 
 
 class Argo2Dataset(DatasetTemplate):
+
     def __init__(self, dataset_cfg, class_names, training=True, root_path=None, logger=None):
         """
         Args:
@@ -484,10 +492,58 @@ class Argo2Dataset(DatasetTemplate):
             ap_dict[index] = row.to_json()
         return metrics.loc[valid_categories], ap_dict
 
+    def create_groundtruth_database(self, used_classes=None):
+        database_save_path = self.root_path / f'gt_database'
+        db_info_save_path = self.root_path / f'argo2_dbinfos.pkl'
+
+        database_save_path.mkdir(parents=True, exist_ok=True)
+        all_db_infos = {}
+
+        for idx in tqdm(range(len(self.argo2_infos))):
+            sample_idx = idx
+            info = copy.deepcopy(self.argo2_infos[idx])
+            frame_id = info['point_cloud']['velodyne_path'].split('/')[-1].rstrip('.bin')
+            points = self.get_lidar(frame_id)
+            annos = info['annos']
+            loc, dims, rots = annos['location'], annos['dimensions'], annos['rotation_y']
+            gt_boxes = np.concatenate([loc, dims, rots[..., np.newaxis]], axis=1).astype(np.float32)
+            gt_names = annos['name']
+
+            box_idxs_of_pts = roiaware_pool3d_utils.points_in_boxes_gpu(
+                torch.from_numpy(points[:, 0:3]).unsqueeze(dim=0).float().cuda(),
+                torch.from_numpy(gt_boxes[:, 0:7]).unsqueeze(dim=0).float().cuda()
+            ).long().squeeze(dim=0).cpu().numpy()
+
+            for i in range(gt_boxes.shape[0]):
+                filename = '%s_%s_%d.bin' % (sample_idx, gt_names[i], i)
+                filepath = database_save_path / filename
+                gt_points = points[box_idxs_of_pts == i]
+
+                gt_points[:, :3] -= gt_boxes[i, :3]
+                with open(filepath, 'w') as f:
+                    gt_points.tofile(f)
+
+                if (used_classes is None) or gt_names[i] in used_classes:
+                    db_path = str(filepath.relative_to(self.root_path))  # gt_database/xxxxx.bin
+                    db_info = {'name': gt_names[i], 'path': db_path, 'image_idx': sample_idx, 'gt_idx': i,
+                               'box3d_lidar': gt_boxes[i], 'num_points_in_gt': gt_points.shape[0]}
+                    if gt_names[i] in all_db_infos:
+                        all_db_infos[gt_names[i]].append(db_info)
+                    else:
+                        all_db_infos[gt_names[i]] = [db_info]
+        for k, v in all_db_infos.items():
+            print('Database %s: %d' % (k, len(v)))
+
+        with open(db_info_save_path, 'wb') as f:
+            pickle.dump(all_db_infos, f)
+
+
 def parse_config():
     parser = argparse.ArgumentParser(description='arg parser')
     parser.add_argument('--root_path', type=str, default="/data/argo2/sensor")
     parser.add_argument('--output_dir', type=str, default="/data/argo2/processed")
+    parser.add_argument('--cfg_file', type=str, default=None, help='specify the config of dataset')
+    parser.add_argument('--func', type=str, default='create_argo2_infos', help='')
     args = parser.parse_args()
     return args
 
@@ -496,42 +552,53 @@ if __name__ == '__main__':
     args = parse_config()
     root = args.root_path
     output_dir = args.output_dir
-    save_bin = True
-    ts2idx, seg_path_list, seg_split_list = prepare(root)
+    if args.func == 'create_argo2_infos':
+        save_bin = True
+        ts2idx, seg_path_list, seg_split_list = prepare(root)
 
-    velodyne_dir = Path(output_dir) / 'training' / 'velodyne'
-    if not velodyne_dir.exists():
-        velodyne_dir.mkdir(parents=True, exist_ok=True)
+        velodyne_dir = Path(output_dir) / 'training' / 'velodyne'
+        if not velodyne_dir.exists():
+            velodyne_dir.mkdir(parents=True, exist_ok=True)
 
-    info_list = []
-    create_argo2_infos(seg_path_list, seg_split_list, info_list, ts2idx, output_dir, save_bin, 0, 1)
+        info_list = []
+        create_argo2_infos(seg_path_list, seg_split_list, info_list, ts2idx, output_dir, save_bin, 0, 1)
 
-    assert len(info_list) > 0
+        assert len(info_list) > 0
 
-    train_info = [e for e in info_list if e['sample_idx'][0] == '0']
-    val_info = [e for e in info_list if e['sample_idx'][0] == '1']
-    test_info = [e for e in info_list if e['sample_idx'][0] == '2']
-    trainval_info = train_info + val_info
-    assert len(train_info) + len(val_info) + len(test_info) == len(info_list)
+        train_info = [e for e in info_list if e['sample_idx'][0] == '0']
+        val_info = [e for e in info_list if e['sample_idx'][0] == '1']
+        test_info = [e for e in info_list if e['sample_idx'][0] == '2']
+        trainval_info = train_info + val_info
+        assert len(train_info) + len(val_info) + len(test_info) == len(info_list)
 
-    # save info_list in under the output_dir as pickle file
-    with open(osp.join(output_dir, 'argo2_infos_train.pkl'), 'wb') as f:
-        pkl.dump(train_info, f)
+        # save info_list in under the output_dir as pickle file
+        with open(osp.join(output_dir, 'argo2_infos_train.pkl'), 'wb') as f:
+            pkl.dump(train_info, f)
 
-    with open(osp.join(output_dir, 'argo2_infos_val.pkl'), 'wb') as f:
-        pkl.dump(val_info, f)
+        with open(osp.join(output_dir, 'argo2_infos_val.pkl'), 'wb') as f:
+            pkl.dump(val_info, f)
 
-    # save validation anno feather
-    save_feather_path = os.path.join(output_dir, 'val_anno.feather')
-    val_seg_path_list = [seg_path for seg_path in seg_path_list if 'val' in seg_path]
-    assert len(val_seg_path_list) == len([i for i in seg_split_list if i == 'val'])
+        # save validation anno feather
+        save_feather_path = os.path.join(output_dir, 'val_anno.feather')
+        val_seg_path_list = [seg_path for seg_path in seg_path_list if 'val' in seg_path]
+        assert len(val_seg_path_list) == len([i for i in seg_split_list if i == 'val'])
 
-    seg_anno_list = []
-    for seg_path in val_seg_path_list:
-        seg_anno = read_feather(osp.join(seg_path, 'annotations.feather'))
-        log_id = seg_path.split('/')[-1]
-        seg_anno["log_id"] = log_id
-        seg_anno_list.append(seg_anno)
+        seg_anno_list = []
+        for seg_path in val_seg_path_list:
+            seg_anno = read_feather(osp.join(seg_path, 'annotations.feather'))
+            log_id = seg_path.split('/')[-1]
+            seg_anno["log_id"] = log_id
+            seg_anno_list.append(seg_anno)
 
-    gts = pd.concat(seg_anno_list).reset_index()
-    gts.to_feather(save_feather_path)
+        gts = pd.concat(seg_anno_list).reset_index()
+        gts.to_feather(save_feather_path)
+
+    elif args.func == 'create_groundtruth_database':
+        dataset_cfg = EasyDict(yaml.safe_load(open(args.cfg_file)))
+        assert root.split('/')[-1] == 'argo2', f"root ends with: {root.split('/')[-1]}"
+        argo2_dataset = Argo2Dataset(
+            dataset_cfg=dataset_cfg, class_names=None,
+            root_path=Path(root),
+            logger=common_utils.create_logger(), training=True
+        )
+        argo2_dataset.create_groundtruth_database()

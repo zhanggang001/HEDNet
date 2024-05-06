@@ -240,6 +240,7 @@ def decode_bbox_from_heatmap(heatmap, rot_cos, rot_sin, center, center_z, dim,
             ret_pred_dicts[-1]['pred_iou'] = iou[k, cur_mask]
     return ret_pred_dicts
 
+
 def _topk_1d(scores, batch_size, batch_idx, obj, K=40, nuscenes=False):
     # scores: (N, num_classes)
     topk_score_list = []
@@ -275,6 +276,7 @@ def _topk_1d(scores, batch_size, batch_idx, obj, K=40, nuscenes=False):
 
     return topk_score, topk_inds, topk_classes
 
+
 def gather_feat_idx(feats, inds, batch_size, batch_idx):
     feats_list = []
     dim = feats.size(-1)
@@ -286,6 +288,7 @@ def gather_feat_idx(feats, inds, batch_size, batch_idx):
         feats_list.append(feat.gather(0, _inds[bs_idx]))
     feats = torch.stack(feats_list)
     return feats
+
 
 def decode_bbox_from_voxels_nuscenes(batch_size, indices, obj, rot_cos, rot_sin,
                             center, center_z, dim, vel=None, iou=None, point_cloud_range=None, voxel_size=None, voxels_3d=None,
@@ -383,3 +386,139 @@ def decode_bbox_from_pred_dicts(pred_dict, point_cloud_range=None, voxel_size=No
     box_preds = torch.cat((box_part_list), dim=-1).view(batch_size, H, W, -1)
 
     return box_preds
+
+
+# Code for SAFDNet
+
+def draw_gaussian_to_normalized_heatmap(heatmap, center, radius, valid_mask=None, normalize=False):
+    diameter = 2 * radius + 1
+    gaussian = gaussian2D((diameter, diameter), sigma=diameter / 6)
+
+    if normalize and gaussian.max() > 0:
+        gaussian /= gaussian.max()
+
+    x, y = int(center[0]), int(center[1])
+    height, width = heatmap.shape[0:2]
+    left, right = min(x, radius), min(width - x, radius + 1)
+    top, bottom = min(y, radius), min(height - y, radius + 1)
+
+    masked_heatmap = heatmap[y - top:y + bottom, x - left:x + right]
+    masked_gaussian = torch.from_numpy(
+        gaussian[radius - top:radius + bottom, radius - left:radius + right]
+    ).to(heatmap.device).float()
+
+    if min(masked_gaussian.shape) > 0 and min(masked_heatmap.shape) > 0:
+        if valid_mask is not None:
+            cur_valid_mask = valid_mask[y - top:y + bottom, x - left:x + right]
+            masked_gaussian = masked_gaussian * cur_valid_mask.float()
+        torch.max(masked_heatmap, masked_gaussian, out=masked_heatmap)
+
+    return heatmap
+
+
+def draw_gaussian_to_sparse_heatmap(heatmap, distances, radius, k=1, normalize=False):
+    sigma = (2 * radius + 1) / 6
+    h = torch.exp(-distances / (2 * sigma * sigma))
+    if normalize:
+        h = h / h.max()
+    h[h < torch.finfo(h.dtype).eps * h.max()] = 0
+    h[distances > 2 * radius ** 2] = 0
+    torch.max(heatmap, h * k, out=heatmap)
+    return heatmap
+
+
+def decode_bbox_from_sparse_pred_dicts(pred_dict, spatial_indices, point_cloud_range, voxel_size, feature_map_stride):
+    center = pred_dict['center']
+    center_z = pred_dict['center_z']
+    dim = torch.exp(torch.clamp(pred_dict['dim'], min=-5, max=5))
+    rot_cos = pred_dict['rot'][:, 0][:, None]
+    rot_sin = pred_dict['rot'][:, 1][:, None]
+    angle = torch.atan2(rot_sin, rot_cos)
+
+    xs = (spatial_indices[:, 1:2] + center[:, 0:1]) * feature_map_stride * voxel_size[0] + point_cloud_range[0]
+    ys = (spatial_indices[:, 0:1] + center[:, 1:2]) * feature_map_stride * voxel_size[1] + point_cloud_range[1]
+    box_preds = torch.cat([xs, ys, center_z, dim, angle], dim=-1)
+    return box_preds
+
+
+def _topk_sparse(scores, batch_size, batch_idx, K=500):
+    topk_score_list = []
+    topk_inds_list = []
+    topk_classes_list = []
+    for bidx in range(batch_size):
+        score = scores[batch_idx == bidx].permute(1, 0)
+        topk_per_cls = min(K, score.shape[-1])
+        topk_scores, topk_inds = torch.topk(score, topk_per_cls)
+        topk_score, topk_ind = torch.topk(topk_scores.view(-1), min(K, topk_scores.view(-1).shape[-1]))
+        topk_classes = (topk_ind // topk_per_cls).int()
+        topk_inds = topk_inds.view(-1).gather(0, topk_ind)
+
+        topk_score_list.append(topk_score)
+        topk_inds_list.append(topk_inds)
+        topk_classes_list.append(topk_classes)
+
+    topk_score = torch.stack(topk_score_list)
+    topk_inds = torch.stack(topk_inds_list)
+    topk_classes = torch.stack(topk_classes_list)
+    return topk_score, topk_inds, topk_classes
+
+
+def _gather_feat_sparse(feats, inds, batch_size, batch_idx):
+    _inds = inds.unsqueeze(-1).expand(inds.size(0), inds.size(1), feats.size(-1))
+    feats_list = [feats[batch_idx == bidx].gather(0, _inds[bidx]) for bidx in range(batch_size)]
+    return torch.stack(feats_list)
+
+
+def decode_bbox_from_sparse_heatmap(
+        heatmap, rot_cos, rot_sin, center, center_z, dim, vel, iou,
+        point_cloud_range, voxel_size, sparse_indices, feature_map_stride,
+        K=500, score_thresh=None, post_center_limit_range=None):
+
+    batch_size = sparse_indices[:, 0].max() + 1
+    batch_idx = sparse_indices[:, 0]
+    spatial_indices = sparse_indices[:, 1:]
+    scores, inds, class_ids = _topk_sparse(heatmap, batch_size, batch_idx, K)
+
+    center = _gather_feat_sparse(center, inds, batch_size, batch_idx)
+    rot_sin = _gather_feat_sparse(rot_sin, inds, batch_size, batch_idx)
+    rot_cos = _gather_feat_sparse(rot_cos, inds, batch_size, batch_idx)
+    center_z = _gather_feat_sparse(center_z, inds, batch_size, batch_idx)
+    dim = _gather_feat_sparse(dim, inds, batch_size, batch_idx)
+    spatial_indices = _gather_feat_sparse(spatial_indices, inds, batch_size, batch_idx)
+
+    angle = torch.atan2(rot_sin, rot_cos)
+    xs = (spatial_indices[:, :, -1:] + center[:, :, 0:1]) * feature_map_stride * voxel_size[0] + point_cloud_range[0]
+    ys = (spatial_indices[:, :, -2:-1] + center[:, :, 1:2]) * feature_map_stride * voxel_size[1] + point_cloud_range[1]
+
+    box_part_list = [xs, ys, center_z, dim, angle]
+    if vel is not None:
+        vel = _gather_feat_sparse(vel, inds, batch_size, batch_idx).view(batch_size, K)
+        box_part_list.append(vel)
+
+    if iou is not None:
+        iou = _gather_feat_sparse(iou, inds, batch_size, batch_idx).view(batch_size, K)
+        iou = torch.clamp(iou, min=0, max=1.)
+
+    final_box_preds = torch.cat((box_part_list), dim=-1)
+    final_scores = scores.view(batch_size, K)
+    final_class_ids = class_ids.view(batch_size, K)
+
+    assert post_center_limit_range is not None
+    mask = (final_box_preds[..., :3] >= post_center_limit_range[:3]).all(2)
+    mask &= (final_box_preds[..., :3] <= post_center_limit_range[3:]).all(2)
+
+    if score_thresh is not None:
+        mask &= (final_scores > score_thresh)
+
+    ret_pred_dicts = []
+    for k in range(batch_size):
+        cur_mask = mask[k]
+        ret_pred_dicts.append({
+            'pred_boxes': final_box_preds[k, cur_mask],
+            'pred_scores': final_scores[k, cur_mask],
+            'pred_labels': final_class_ids[k, cur_mask],
+        })
+        if iou is not None:
+            ret_pred_dicts[-1]['pred_ious'] = iou[k, cur_mask]
+
+    return ret_pred_dicts

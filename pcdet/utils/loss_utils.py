@@ -493,6 +493,7 @@ class IouLossSparse(nn.Module):
         loss = loss / (mask.sum() + 1e-4)
         return loss
 
+
 class IouRegLossSparse(nn.Module):
     '''Distance IoU loss for output boxes
         Arguments:
@@ -565,10 +566,11 @@ class IouRegLossSparse(nn.Module):
         loss =  loss / (mask.sum() + 1e-4)
         return loss
 
+
 class L1Loss(nn.Module):
     def __init__(self):
         super(L1Loss, self).__init__()
-       
+
     def forward(self, pred, target):
         if target.numel() == 0:
             return pred.sum() * 0
@@ -591,14 +593,14 @@ def calculate_iou_loss_transfusionhead(iou_preds, batch_box_preds, gt_boxes, wei
     # iou_target = iou3d_nms_utils.paired_boxes_iou3d_gpu(batch_box_preds.reshape(-1, 7), gt_boxes.reshape(-1, 7))
     # # iou_target = iou3d_nms_utils.boxes_iou3d_gpu(selected_box_preds[:, 0:7].clone(), gt_boxes[mask][:, 0:7].clone()).diag()
     # iou_target = iou_target * 2 - 1  # [0, 1] ==> [-1, 1]
-    
+
     # # print(selected_iou_preds.view(-1), iou_target)
     # valid_index = torch.nonzero(weights[:, :, 0].view(-1)).squeeze(-1)
     # loss = F.l1_loss(iou_preds.view(-1)[valid_index], iou_target[valid_index], reduction='sum')
     # # loss = loss / torch.clamp(torch.FloatTensor([iou_preds.shape[0] * iou_preds.shape[2]])[0].to(iou_target.device), min=1e-4)
     # loss = loss / max(num_pos, 1)
     # return loss
-    
+
     iou_target = iou3d_nms_utils.boxes_aligned_iou3d_gpu(batch_box_preds.reshape(-1, 7), gt_boxes.reshape(-1, 7)).view(-1)
     # valid_index = torch.nonzero(iou_target).squeeze(-1)
     valid_index = torch.nonzero(iou_target * weights[:, :, 0].view(-1)).squeeze(-1)
@@ -612,15 +614,17 @@ def calculate_iou_loss_transfusionhead(iou_preds, batch_box_preds, gt_boxes, wei
 
 
 def calculate_iou_reg_loss_transfusionhead(batch_box_preds, gt_boxes, weights, num_pos):
-    
+
     valid_index = torch.nonzero(weights[:, :, 0].view(-1)).squeeze(-1)
     iou = box_utils.bbox3d_overlaps_diou(batch_box_preds.reshape(-1, 7)[valid_index], gt_boxes.reshape(-1, 7)[valid_index])
     revalid_index = torch.nonzero(iou > 0).squeeze(-1)
     iou = iou[revalid_index]
     num_pos = revalid_index.shape[0]
     loss = (1.0 - iou).sum() / max(num_pos, 1)
-    
+
     return loss
+
+
 class GaussianFocalLoss(nn.Module):
     """GaussianFocalLoss is a variant of focal loss.
 
@@ -693,4 +697,83 @@ def calculate_iou_reg_loss_centerhead(batch_box_preds, mask, ind, gt_boxes):
     iou = box_utils.bbox3d_overlaps_diou(selected_box_preds[mask][:, 0:7], gt_boxes[mask][:, 0:7])
 
     loss = (1.0 - iou).sum() / torch.clamp(mask.sum(), min=1e-4)
+    return loss
+
+
+# Code for SAFDNet
+
+
+def focal_loss_sparse(pred, target):
+    pos_inds = target.eq(1).float()
+    neg_inds = target.lt(1).float()
+
+    neg_weights = torch.pow(1 - target, 4)
+    pos_loss = torch.log(pred) * torch.pow(1 - pred, 2) * pos_inds
+    neg_loss = torch.log(1 - pred) * torch.pow(pred, 2) * neg_weights * neg_inds
+
+    pos_loss = pos_loss.sum()
+    neg_loss = neg_loss.sum()
+
+    loss = 0
+    num_pos = pos_inds.float().sum()
+    if num_pos == 0:
+        loss = loss - neg_loss
+    else:
+        loss = loss - (pos_loss + neg_loss) / num_pos
+    return loss
+
+
+def reg_loss_sparse(pred, mask, ind, target, spatial_indices):
+    if sum([m.sum() for m in mask]) == 0:
+        return pred.sum() * 0.0
+
+    pred = torch.cat([pred[spatial_indices[:, 0] == bidx][ind[bidx]] for bidx in range(len(mask))], dim=0)
+    target = torch.cat([t for t in target], dim=0)
+    mask = torch.cat([m for m in mask], dim=0)
+    num = mask.sum().float()
+
+    mask = mask.unsqueeze(1).expand_as(target).float()
+    isnotnan = (~ torch.isnan(target)).float()
+    mask *= isnotnan
+    pred = pred * mask
+    target = target * mask
+
+    loss = torch.abs(pred - target)
+    loss = torch.sum(loss, dim=0)
+    loss = loss / torch.clamp_min(num, min=1.0)
+    return loss
+
+
+def iou_loss_sparse(iou_pred, mask, ind, box_pred, box_gt, spatial_indices):
+    loss = 0
+    for bidx in range(len(mask)):
+        batch_inds = spatial_indices[:, 0] == bidx
+        pred_iou = iou_pred[batch_inds][ind[bidx]][mask[bidx]]
+        pred_box = box_pred[batch_inds][ind[bidx]][mask[bidx]]
+        gt_box = box_gt[bidx][mask[bidx]]
+        target_iou = iou3d_nms_utils.boxes_aligned_iou3d_gpu(pred_box[:, :7], gt_box[:, :7])
+        target_iou = 2 * target_iou - 1
+        loss += F.l1_loss(pred_iou, target_iou, reduction='sum')
+    loss = loss / torch.clamp(sum([m.sum() for m in mask]).float(), min=1e-4)
+    return loss
+
+
+def iou_loss_sparse_transfusionhead(iou_preds, box_preds, box_targets, weights):
+    iou_target = iou3d_nms_utils.boxes_aligned_iou3d_gpu(box_preds.reshape(-1, 7), box_targets.reshape(-1, 7)).view(-1)
+    valid_index = torch.nonzero(iou_target * weights[:, :, 0].view(-1)).squeeze(-1)
+    iou_target = iou_target * 2 - 1  # [0, 1] ==> [-1, 1]
+
+    num_pos = valid_index.shape[0]
+    loss = F.l1_loss(iou_preds.view(-1)[valid_index], iou_target[valid_index], reduction='sum')
+    loss = loss / max(num_pos, 1)
+    return loss
+
+
+def iou_reg_loss_sparse_transfusionhead(box_preds, box_targets, weights):
+    valid_index = torch.nonzero(weights[:, :, 0].view(-1)).squeeze(-1)
+    iou = box_utils.bbox3d_overlaps_diou(box_preds.reshape(-1, 7)[valid_index], box_targets.reshape(-1, 7)[valid_index])
+    valid_index = torch.nonzero(iou > 0).squeeze(-1)
+    iou = iou[valid_index]
+    num_pos = valid_index.shape[0]
+    loss = (1.0 - iou).sum() / max(num_pos, 1)
     return loss

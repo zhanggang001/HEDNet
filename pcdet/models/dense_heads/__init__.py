@@ -8,6 +8,9 @@ from .center_head import CenterHead
 from .voxelnext_head import VoxelNeXtHead
 from .transfusion_head import TransFusionHead
 from .bev_segmentation_head import BEVSegmentationHead
+from .sparse_center_head import SparseCenterHead
+from .sparse_transfusion_head import SparseTransFusionHead
+
 __all__ = {
     'AnchorHeadTemplate': AnchorHeadTemplate,
     'AnchorHeadSingle': AnchorHeadSingle,
@@ -18,5 +21,7 @@ __all__ = {
     'CenterHead': CenterHead,
     'VoxelNeXtHead': VoxelNeXtHead,
     'TransFusionHead': TransFusionHead,
-    'BEVSegmentationHead': BEVSegmentationHead
+    'BEVSegmentationHead': BEVSegmentationHead,
+    'SparseCenterHead': SparseCenterHead,
+    'SparseTransFusionHead': SparseTransFusionHead,
 }
