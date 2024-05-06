@@ -42,6 +42,10 @@ def parse_config():
     parser.add_argument('--infer_time', action='store_true', default=False, help='calculate inference latency')
     parser.add_argument('--eval_map',  action='store_true', default=False, help='evaluate bev map segmentation')
 
+    parser.add_argument('--dataset', type=str, default='waymo')
+    parser.add_argument('--root_dir', type=str, default='.')
+    parser.add_argument('--output_dir', type=str, default='output')
+
     args = parser.parse_args()
 
     cfg_from_yaml_file(args.cfg_file, cfg)
@@ -53,15 +57,19 @@ def parse_config():
     if args.set_cfgs is not None:
         cfg_from_list(args.set_cfgs, cfg)
 
+    cfg.ROOT_DIR = Path(args.root_dir).resolve()
+    cfg.OUTPUT_DIR = Path(args.output_dir).resolve()
+    cfg.DATA_CONFIG.DATA_PATH = cfg.ROOT_DIR / f'data/{args.dataset}'
+
     return args, cfg
 
 
 def eval_single_ckpt(model, test_loader, args, eval_output_dir, logger, epoch_id, dist_test=False):
     # load checkpoint
-    model.load_params_from_file(filename=args.ckpt, logger=logger, to_cpu=dist_test, 
+    model.load_params_from_file(filename=args.ckpt, logger=logger, to_cpu=dist_test,
                                 pre_trained_path=args.pretrained_model)
     model.cuda()
-    
+
     # start evaluation
     if args.eval_map:
         eval_utils.eval_map_one_epoch(
@@ -169,7 +177,8 @@ def main():
         assert args.batch_size % total_gpus == 0, 'Batch size should match the number of gpus'
         args.batch_size = args.batch_size // total_gpus
 
-    output_dir = cfg.ROOT_DIR / 'output' / cfg.EXP_GROUP_PATH / cfg.TAG / args.extra_tag
+    # output_dir = cfg.ROOT_DIR / 'output' / cfg.EXP_GROUP_PATH / cfg.TAG / args.extra_tag
+    output_dir = cfg.OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
     eval_output_dir = output_dir / 'eval'

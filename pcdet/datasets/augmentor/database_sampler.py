@@ -74,24 +74,24 @@ class DataBaseSampler(object):
     def __setstate__(self, d):
         self.__dict__.update(d)
 
-    def __del__(self):
-        if self.use_shared_memory:
-            self.logger.info('Deleting GT database from shared memory')
-            cur_rank, num_gpus = common_utils.get_dist_info()
-            sa_key = self.sampler_cfg.DB_DATA_PATH[0]
-            if cur_rank % num_gpus == 0 and os.path.exists(f"/dev/shm/{sa_key}"):
-                SharedArray.delete(f"shm://{sa_key}")
+    # def __del__(self):
+    #     if self.use_shared_memory:
+    #         self.logger.info('Deleting GT database from shared memory')
+    #         cur_rank, num_gpus = common_utils.get_dist_info()
+    #         sa_key = self.sampler_cfg.DB_DATA_PATH[0]
+    #         if cur_rank % num_gpus == 0 and os.path.exists(f"/dev/shm/{sa_key}"):
+    #             SharedArray.delete(f"shm://{sa_key}")
 
-            if num_gpus > 1:
-                dist.barrier()
-            self.logger.info('GT database has been removed from shared memory')
+    #         if num_gpus > 1:
+    #             dist.barrier()
+    #         self.logger.info('GT database has been removed from shared memory')
 
     def load_db_to_shared_memory(self):
         self.logger.info('Loading GT database to shared memory')
         cur_rank, world_size, num_gpus = common_utils.get_dist_info(return_gpu_per_machine=True)
 
         # assert self.sampler_cfg.DB_DATA_PATH.__len__() == 1, 'Current only support single DB_DATA'
-        db_data_path = self.root_path.resolve() / self.sampler_cfg.DB_DATA_PATH[0]        
+        db_data_path = self.root_path.resolve() / self.sampler_cfg.DB_DATA_PATH[0]
         sa_key = self.sampler_cfg.DB_DATA_PATH[0]
 
         if cur_rank % num_gpus == 0 and not os.path.exists(f"/dev/shm/{sa_key}"):
@@ -420,8 +420,8 @@ class DataBaseSampler(object):
             }
         elif self.img_aug_type == 'nuscenes':
             obj_index_list, crop_boxes2d = [], []
-            gt_number = gt_boxes_mask.sum().astype(np.int)
-            gt_boxes2d = data_dict['gt_boxes2d'][gt_boxes_mask].astype(np.int)
+            gt_number = gt_boxes_mask.sum().astype(int)
+            gt_boxes2d = data_dict['gt_boxes2d'][gt_boxes_mask].astype(int)
             gt_crops2d = [data_dict['ori_imgs'][_x[-1]][_x[1]:_x[3],_x[0]:_x[2]] for _x in gt_boxes2d]
 
             img_aug_gt_dict = {

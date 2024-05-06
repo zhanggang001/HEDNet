@@ -153,19 +153,19 @@ class DatasetTemplate(torch_data.Dataset):
             noise_translate = data_dict['noise_translate']
             lidar_aug_matrix[:3,3:4] = noise_translate.T
         data_dict['lidar_aug_matrix'] = lidar_aug_matrix
-        if self.use_camera:
+        if getattr(self, 'use_camera', False):
             lidar2image_aug = []
             for l2m in data_dict['lidar2image']:
                 lidar2image_aug.append(l2m @ np.linalg.inv(lidar_aug_matrix))
             data_dict['lidar2image_aug'] = lidar2image_aug
         return data_dict
-    
+
     def set_lidar_aug_matrix_map(self, data_dict):
         """
             Get lidar augment matrix (4 x 4), which are used to recover orig point coordinates.
         """
         lidar_aug_matrix = np.eye(4)
-        
+
         if 'noise_rot' in data_dict.keys():
             noise_rot = data_dict['noise_rot']
             lidar_aug_matrix[:3,:3] = common_utils.angle2matrix(torch.tensor(noise_rot)) @ lidar_aug_matrix[:3,:3]
@@ -184,7 +184,7 @@ class DatasetTemplate(torch_data.Dataset):
             if flip_y:
                 lidar_aug_matrix[:3,:] = np.array([[-1, 0, 0], [0, 1, 0], [0, 0, 1]]) @ lidar_aug_matrix[:3,:]
         data_dict['lidar_aug_matrix'] = lidar_aug_matrix
-        if self.use_camera:
+        if getattr(self, 'use_camera', False):
             lidar2image_aug = []
             for l2m in data_dict['lidar2image']:
                 lidar2image_aug.append(l2m @ np.linalg.inv(lidar_aug_matrix))
@@ -226,7 +226,7 @@ class DatasetTemplate(torch_data.Dataset):
             )
             if 'calib' in data_dict:
                 data_dict['calib'] = calib
-        if self.use_map:
+        if getattr(self, 'use_map', False):
             data_dict = self.set_lidar_aug_matrix_map(data_dict)
         else:
             data_dict = self.set_lidar_aug_matrix(data_dict)

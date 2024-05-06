@@ -278,7 +278,7 @@ class DataAugmentor(object):
             rotate = np.random.uniform(*config.ROT_LIM)
             # aug images
             if flip:
-                img = img.transpose(method=Image.FLIP_LEFT_RIGHT)
+                img = img.transpose(method=Image.Transpose.FLIP_LEFT_RIGHT)
             img = img.rotate(rotate)
             img_process_info[2] = flip
             img_process_info[3] = rotate

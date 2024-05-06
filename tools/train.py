@@ -43,7 +43,7 @@ def parse_config():
     parser.add_argument('--start_epoch', type=int, default=0, help='')
     parser.add_argument('--num_epochs_to_eval', type=int, default=0, help='number of checkpoints to be evaluated')
     parser.add_argument('--save_to_file', action='store_true', default=False, help='')
-    
+
     parser.add_argument('--use_tqdm_to_record', action='store_true', default=False, help='if True, the intermediate losses will not be logged to file, only tqdm will be used')
     parser.add_argument('--logger_iter_interval', type=int, default=50, help='')
     parser.add_argument('--ckpt_save_time_interval', type=int, default=300, help='in terms of seconds')
@@ -51,18 +51,24 @@ def parse_config():
     parser.add_argument('--use_amp', action='store_true', help='use mix precision training')
     parser.add_argument('--eval_map', action='store_true', default=False, help='evaluate bev map segmentation')
 
-    
+    parser.add_argument('--dataset', type=str, default='waymo')
+    parser.add_argument('--root_dir', type=str, default='.')
+    parser.add_argument('--output_dir', type=str, default='output')
 
     args = parser.parse_args()
 
     cfg_from_yaml_file(args.cfg_file, cfg)
     cfg.TAG = Path(args.cfg_file).stem
     cfg.EXP_GROUP_PATH = '/'.join(args.cfg_file.split('/')[1:-1])  # remove 'cfgs' and 'xxxx.yaml'
-    
+
     args.use_amp = args.use_amp or cfg.OPTIMIZATION.get('USE_AMP', False)
 
     if args.set_cfgs is not None:
         cfg_from_list(args.set_cfgs, cfg)
+
+    cfg.ROOT_DIR = Path(args.root_dir).resolve()
+    cfg.OUTPUT_DIR = Path(args.output_dir).resolve()
+    cfg.DATA_CONFIG.DATA_PATH = cfg.ROOT_DIR / f'data/{args.dataset}'
 
     return args, cfg
 
@@ -89,7 +95,8 @@ def main():
     if args.fix_random_seed:
         common_utils.set_random_seed(666 + cfg.LOCAL_RANK)
 
-    output_dir = cfg.ROOT_DIR / 'output' / cfg.EXP_GROUP_PATH / cfg.TAG / args.extra_tag
+    # output_dir = cfg.ROOT_DIR / 'output' / cfg.EXP_GROUP_PATH / cfg.TAG / args.extra_tag
+    output_dir = cfg.OUTPUT_DIR
     ckpt_dir = output_dir / 'ckpt'
     output_dir.mkdir(parents=True, exist_ok=True)
     ckpt_dir.mkdir(parents=True, exist_ok=True)
@@ -106,7 +113,7 @@ def main():
         logger.info('Training in distributed mode : total_batch_size: %d' % (total_gpus * args.batch_size))
     else:
         logger.info('Training with a single process')
-        
+
     for key, val in vars(args).items():
         logger.info('{:16} {}'.format(key, val))
     log_config_to_file(cfg, logger=logger)
@@ -146,7 +153,7 @@ def main():
         last_epoch = start_epoch + 1
     else:
         ckpt_list = glob.glob(str(ckpt_dir / '*.pth'))
-              
+
         if len(ckpt_list) > 0:
             ckpt_list.sort(key=os.path.getmtime)
             while len(ckpt_list) > 0:
@@ -191,11 +198,11 @@ def main():
         lr_warmup_scheduler=lr_warmup_scheduler,
         ckpt_save_interval=args.ckpt_save_interval,
         max_ckpt_save_num=args.max_ckpt_save_num,
-        merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch, 
-        logger=logger, 
+        merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch,
+        logger=logger,
         logger_iter_interval=args.logger_iter_interval,
         ckpt_save_time_interval=args.ckpt_save_time_interval,
-        use_logger_to_record=not args.use_tqdm_to_record, 
+        use_logger_to_record=not args.use_tqdm_to_record,
         show_gpu_stat=not args.wo_gpu_stat,
         use_amp=args.use_amp,
         cfg=cfg

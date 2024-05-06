@@ -1,12 +1,14 @@
-import pickle
 import time
+import pickle
+import subprocess
 
-import numpy as np
 import torch
 import tqdm
 
 from pcdet.models import load_data_to_gpu
 from pcdet.utils import common_utils
+from waymo_open_dataset import label_pb2
+from waymo_open_dataset.protos import metrics_pb2
 
 
 def statistics_info(cfg, ret_dict, metric, disp_dict):
@@ -17,6 +19,99 @@ def statistics_info(cfg, ret_dict, metric, disp_dict):
     min_thresh = cfg.MODEL.POST_PROCESSING.RECALL_THRESH_LIST[0]
     disp_dict['recall_%s' % str(min_thresh)] = \
         '(%d, %d) / %d' % (metric['recall_roi_%s' % str(min_thresh)], metric['recall_rcnn_%s' % str(min_thresh)], metric['gt_num'])
+
+
+def convert_pkl_file_to_bin(result_dir, results=None):
+    if results is None:
+        f = open(result_dir / 'result.pkl','rb')
+        results = pickle.load(f)
+
+    objects = metrics_pb2.Objects()
+    k2w_cls_map = {
+        'Vehicle': label_pb2.Label.TYPE_VEHICLE,
+        'Pedestrian': label_pb2.Label.TYPE_PEDESTRIAN,
+        'Sign': label_pb2.Label.TYPE_SIGN,
+        'Cyclist': label_pb2.Label.TYPE_CYCLIST,
+    }
+
+    with tqdm.tqdm(total=len(results)) as pbar:
+        for result in results:
+            metadata = result['metadata']
+
+            for idx in range(len(result['name'])):
+                o = metrics_pb2.Object()
+                o.context_name = metadata['context_name']
+
+                invalid_ts = metadata['timestamp_micros']
+                o.frame_timestamp_micros = invalid_ts
+
+                boxes_lidar = result['boxes_lidar'][idx]
+                box = label_pb2.Label.Box()
+                box.center_x = round(boxes_lidar[0], 4)
+                box.center_y = round(boxes_lidar[1], 4)
+                box.center_z = round(boxes_lidar[2], 4)
+                box.length = round(boxes_lidar[3], 4)
+                box.width = round(boxes_lidar[4], 4)
+                box.height = round(boxes_lidar[5], 4)
+                box.heading = round(boxes_lidar[6], 4)
+                o.object.box.CopyFrom(box)
+
+                score = round(result['score'][idx], 4)
+                o.score = score
+                o.object.type = k2w_cls_map[result['name'][idx]]
+                objects.objects.append(o)
+
+            pbar.update(1)
+
+        f = open(result_dir / 'result.bin', 'wb')
+        f.write(objects.SerializeToString())
+        f.close()
+
+
+def waymo_fast_eval(bin_file):
+    eval_str = f'data/waymo/compute_detection_metrics_main {bin_file} data/waymo/gt.bin'
+    ret_bytes = subprocess.check_output(eval_str, shell=True)
+    ret_texts = ret_bytes.decode('utf-8')
+
+    print(ret_texts)
+
+    ap_dict = {
+        'Vehicle/L1 mAP': 0,
+        'Vehicle/L1 mAPH': 0,
+        'Vehicle/L2 mAP': 0,
+        'Vehicle/L2 mAPH': 0,
+        'Pedestrian/L1 mAP': 0,
+        'Pedestrian/L1 mAPH': 0,
+        'Pedestrian/L2 mAP': 0,
+        'Pedestrian/L2 mAPH': 0,
+        'Sign/L1 mAP': 0,
+        'Sign/L1 mAPH': 0,
+        'Sign/L2 mAP': 0,
+        'Sign/L2 mAPH': 0,
+        'Cyclist/L1 mAP': 0,
+        'Cyclist/L1 mAPH': 0,
+        'Cyclist/L2 mAP': 0,
+        'Cyclist/L2 mAPH': 0,
+        'Overall/L1 mAP': 0,
+        'Overall/L1 mAPH': 0,
+        'Overall/L2 mAP': 0,
+        'Overall/L2 mAPH': 0
+    }
+    mAP_splits = ret_texts.split('mAP ')
+    mAPH_splits = ret_texts.split('mAPH ')
+    for idx, key in enumerate(ap_dict.keys()):
+        split_idx = int(idx / 2) + 1
+        if idx % 2 == 0:  # mAP
+            ap_dict[key] = float(mAP_splits[split_idx].split(']')[0])
+        else:  # mAPH
+            ap_dict[key] = float(mAPH_splits[split_idx].split(']')[0])
+
+    ap_dict['Overall/L1 mAP'] = (ap_dict['Vehicle/L1 mAP'] + ap_dict['Pedestrian/L1 mAP'] + ap_dict['Cyclist/L1 mAP']) / 3
+    ap_dict['Overall/L1 mAPH'] = (ap_dict['Vehicle/L1 mAPH'] + ap_dict['Pedestrian/L1 mAPH'] + ap_dict['Cyclist/L1 mAPH']) / 3
+    ap_dict['Overall/L2 mAP'] = (ap_dict['Vehicle/L2 mAP'] + ap_dict['Pedestrian/L2 mAP'] + ap_dict['Cyclist/L2 mAP']) / 3
+    ap_dict['Overall/L2 mAPH'] = (ap_dict['Vehicle/L2 mAPH'] + ap_dict['Pedestrian/L2 mAPH'] + ap_dict['Cyclist/L2 mAPH']) / 3
+    print(ap_dict)
+    return ap_dict
 
 
 def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=False, result_dir=None):
@@ -122,13 +217,16 @@ def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=Fal
     with open(result_dir / 'result.pkl', 'wb') as f:
         pickle.dump(det_annos, f)
 
-    result_str, result_dict = dataset.evaluation(
-        det_annos, class_names,
-        eval_metric=cfg.MODEL.POST_PROCESSING.EVAL_METRIC,
-        output_path=final_output_dir
-    )
+    if len(class_names) == 3: # only for waymo
+        convert_pkl_file_to_bin(result_dir, det_annos)
+        result_dict = waymo_fast_eval(result_dir / 'result.bin')
+    else:
+        result_str, result_dict = dataset.evaluation(
+            det_annos, class_names,
+            eval_metric=cfg.MODEL.POST_PROCESSING.EVAL_METRIC,
+            output_path=final_output_dir)
+        logger.info(result_str)
 
-    logger.info(result_str)
     ret_dict.update(result_dict)
 
     logger.info('Result is saved to %s' % result_dir)
