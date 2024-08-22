@@ -81,6 +81,7 @@ MODEL:
         DED_NUM_LAYERS: 2
         DED_NUM_SBB: [2, 1, 1]
         DED_DOWN_STRIDE: [1, 2, 2]
+        CONV_BIAS: True
 
     DENSE_HEAD:
         NAME: TransFusionHead
