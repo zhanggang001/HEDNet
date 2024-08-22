@@ -25,16 +25,16 @@ We could not provide the above pretrained models due to [Waymo Dataset License A
 ### Results on NuScenes
 
 #### Validation set
-|Model|   mATE |  mASE  |  mAOE  | mAVE  | mAAE  |  mAP  |  NDS   |                                              Checkpoint                                              |
+|Model|   mATE |  mASE  |  mAOE  | mAVE  | mAAE  |  mAP  |  NDS   |  Checkpoint |
 |----------------------------------------------------------------------------------------------------|-------:|:------:|:------:|:-----:|:-----:|:-----:|:------:|:--------------------------------------------------------------------------------------------------:|
-| [HEDNet](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/hednet_models/hednet_20e_nusences.yaml)  | 27.5 | 25.1 | 26.3 |	23.3 | 18.7 | 67.0 | 71.4 | Todo |
-| [SAFDNet](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/safdnet_models/safdnet_20e_nuscenes.yaml)        | 27.2 | 25.1 | 24.9 |	25.6 | 18.9 | 66.3 | 71.0 | Todo |
+| [HEDNet](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/hednet_models/hednet_20e_nusences.yaml)  | 26.9 | 24.9 | 26.3 |	25.5 | 18.0 | 67.3 | 71.5 | [ckpt](https://cloud.tsinghua.edu.cn/f/4c1880be8453468baa4c/?dl=1) & [log](https://cloud.tsinghua.edu.cn/f/d31fb828452449a49700/?dl=1)|
+| [SAFDNet](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/safdnet_models/safdnet_20e_nuscenes.yaml)        | 27.3 | 25.4 | 27.6 |	25.5 | 18.3 | 66.5 | 70.9 | [ckpt](https://cloud.tsinghua.edu.cn/f/5a327be6f8a440fd9d22/?dl=1) & [log](https://cloud.tsinghua.edu.cn/f/25c72526e9ad4f95851b/?dl=1) |
 
 #### Test set
 |Model| mATE | mASE | mAOE | mAVE | mAAE | mAP | NDS | Leaderboard |
 |---|-------:|:------:|:------:|:-----:|:-----:|:-----:|:------:|:----:|
-| HEDNet | 25.0 | 23.8 | 31.7 | 24.0 | 13.0 | 67.5 | 72.0 | [json](https://cloud.tsinghua.edu.cn/f/bf54afa8d28c4d74affe/?dl=1) |
-| SAFDNet | 25.1 | 24.2 | 31.1 | 25.8 | 12.7 | 68.3 | 72.3 | [json](https://cloud.tsinghua.edu.cn/f/053105f6e2044b59918d/?dl=1) |
+| HEDNet | 25.0 | 23.8 | 31.7 | 24.0 | 13.0 | 67.5 | 72.0 | [json](https://cloud.tsinghua.edu.cn/f/afc2275bdbef4ae4ac11/?dl=1) |
+| SAFDNet | 25.1 | 24.2 | 31.1 | 25.8 | 12.7 | 68.3 | 72.3 | [json](https://cloud.tsinghua.edu.cn/f/6b254feee21445318e0f/?dl=1) |
 
 
 ### Results on Argoverse2
@@ -48,7 +48,7 @@ We could not provide the above pretrained models due to [Waymo Dataset License A
 
 ## Installation and usage
 
-For `OpenPCDet`, please refer to [INSTALL.md](docs/INSTALL.md) and [GETTING_STARTED.md](docs/GETTING_STARTED.md) for the installation and usage, respectively. We used python 3.8, pytorch 1.10, cuda11.3, spconv-cu113 2.3.3. We provide a list of Python packages output from `pip freeze` [here](https://cloud.tsinghua.edu.cn/f/0679e6cc268c408b8430/?dl=1), to help configure the environment.
+For `OpenPCDet`, please refer to [INSTALL.md](docs/INSTALL.md) and [GETTING_STARTED.md](docs/GETTING_STARTED.md) for the installation and usage, respectively. We used python 3.8, pytorch 1.10, cuda11.3, spconv-cu113 2.3.3. We provide a list of Python packages output from `pip freeze` [here](https://cloud.tsinghua.edu.cn/f/066bd16c12314eb6bc26/?dl=1), to help configure the environment.
 
 You can create an experiment folder in any location, and organize it like this:
 ```
