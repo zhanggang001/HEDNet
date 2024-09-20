@@ -81,7 +81,6 @@ MODEL:
         DED_NUM_LAYERS: 2
         DED_NUM_SBB: [2, 1, 1]
         DED_DOWN_STRIDE: [1, 2, 2]
-        CONV_BIAS: True
 
     DENSE_HEAD:
         NAME: TransFusionHead
@@ -89,7 +88,7 @@ MODEL:
         USE_BIAS_BEFORE_NORM: False
 
         INPUT_FEATURES: 128
-        NUM_PROPOSALS: 200
+        NUM_PROPOSALS: 200  # set it to 300 when performing inference on the test set (inference only)
         HIDDEN_CHANNEL: 128
         NUM_CLASSES: 10
         NUM_HEADS: 8
@@ -175,10 +174,10 @@ OPTIMIZATION:
     LR_WARMUP: False
     WARMUP_EPOCH: 1
 
-    GRAD_NORM_CLIP: 10
-    LOSS_SCALE_FP16: 32
+    GRAD_NORM_CLIP: 35
+    LOSS_SCALE_FP16: 4.0
 
 HOOK:
     DisableAugmentationHook:
         DISABLE_AUG_LIST: ['gt_sampling']
-        NUM_LAST_EPOCHS: 4
+        NUM_LAST_EPOCHS: 4  # yield similar results if set it to 5 following mmdetection3d

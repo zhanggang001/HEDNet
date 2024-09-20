@@ -35,7 +35,7 @@ DATA_AUGMENTOR:
           DB_INFO_PATH:
               - waymo_processed_data_v0_5_0_waymo_dbinfos_train_sampled_1_multiframe_-4_to_0.pkl
 
-          USE_SHARED_MEMORY: False  # set it to True to speed up (it costs about 50GB? shared memory)
+          USE_SHARED_MEMORY: True  # set it to True to speed up (it costs about 50GB? shared memory)
           DB_DATA_PATH:
               - waymo_processed_data_v0_5_0_gt_database_train_sampled_1_multiframe_-4_to_0_global.npy
 

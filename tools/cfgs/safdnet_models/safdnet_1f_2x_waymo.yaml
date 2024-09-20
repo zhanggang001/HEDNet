@@ -161,8 +161,8 @@ OPTIMIZATION:
     LR_WARMUP: False
     WARMUP_EPOCH: 1
 
-    GRAD_NORM_CLIP: 10
-    LOSS_SCALE_FP16: 32.0
+    GRAD_NORM_CLIP: 35
+    LOSS_SCALE_FP16: 4.0
 
 HOOK:
     DisableAugmentationHook:
