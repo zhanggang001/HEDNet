@@ -71,7 +71,7 @@ def post_act_block_sparse_3d(input_dim, output_dim, kernel_size, stride=1, paddi
 
 class SparseBasicBlock2D(spconv.SparseModule):
 
-    def __init__(self, dim, indice_key, norm_fn=norm_fn_1d, bias=False):
+    def __init__(self, dim, indice_key, norm_fn=norm_fn_1d, bias=True):
         super(SparseBasicBlock2D, self).__init__()
 
         self.conv1 = spconv.SubMConv2d(dim, dim, 3, 1, 1, bias=bias, indice_key=indice_key)
@@ -94,7 +94,7 @@ class SparseBasicBlock2D(spconv.SparseModule):
 
 class SparseBasicBlock3D(spconv.SparseModule):
 
-    def __init__(self, dim, indice_key, norm_fn=norm_fn_1d, bias=False):
+    def __init__(self, dim, indice_key, norm_fn=norm_fn_1d, bias=True):
         super(SparseBasicBlock3D, self).__init__()
 
         self.conv1 = spconv.SubMConv3d(dim, dim, 3, 1, 1, bias=bias, indice_key=indice_key)

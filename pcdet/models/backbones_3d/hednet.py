@@ -23,7 +23,7 @@ norm_fn_2d = partial(nn.BatchNorm2d, eps=1e-3, momentum=0.01)
 
 class SEDLayer(spconv.SparseModule):
 
-    def __init__(self, dim: int, down_kernel_size: list, down_stride: list, num_SBB: list, indice_key, xy_only=False, bias=False):
+    def __init__(self, dim: int, down_kernel_size: list, down_stride: list, num_SBB: list, indice_key, xy_only=False):
         super().__init__()
 
         block = SparseBasicBlock2D if xy_only else SparseBasicBlock3D
@@ -31,7 +31,7 @@ class SEDLayer(spconv.SparseModule):
 
         self.encoder = nn.ModuleList(
             [spconv.SparseSequential(
-                *[block(dim, indice_key=f"{indice_key}_0", bias=bias) for _ in range(num_SBB[0])])]
+                *[block(dim, indice_key=f"{indice_key}_0") for _ in range(num_SBB[0])])]
         )
 
         num_levels = len(down_stride)
@@ -41,7 +41,7 @@ class SEDLayer(spconv.SparseModule):
                     dim, dim, down_kernel_size[idx], down_stride[idx], down_kernel_size[idx] // 2,
                     conv_type='spconv', indice_key=f'spconv_{indice_key}_{idx}'),
 
-                *[block(dim, indice_key=f"{indice_key}_{idx}", bias=bias) for _ in range(num_SBB[idx])]
+                *[block(dim, indice_key=f"{indice_key}_{idx}") for _ in range(num_SBB[idx])]
             ]
             self.encoder.append(spconv.SparseSequential(*cur_layers))
 
@@ -122,20 +122,19 @@ class HEDNet(nn.Module):
         ded_down_stride = model_cfg.DED_DOWN_STRIDE
         assert ded_down_stride[0] == 1
         assert len(ded_num_SBB) == len(ded_down_stride)
-        conv_bias = model_cfg.get('CONV_BIAS', False)
 
         post_act_block = post_act_block_sparse_3d
         self.stem = spconv.SparseSequential(
             post_act_block(input_channels, 16, 3, 1, 1, indice_key='subm1', conv_type='subm'),
 
-            SparseBasicBlock3D(16, indice_key='stem', bias=conv_bias),
-            SparseBasicBlock3D(16, indice_key='stem', bias=conv_bias),
+            SparseBasicBlock3D(16, indice_key='stem'),
+            SparseBasicBlock3D(16, indice_key='stem'),
             post_act_block(16, 32, 3, 2, 1, indice_key='spconv1', conv_type='spconv'),
 
-            SEDLayer(32, sed_down_kernel_size, sed_down_stride, sed_num_SBB, indice_key='sedlayer2', bias=conv_bias),
+            SEDLayer(32, sed_down_kernel_size, sed_down_stride, sed_num_SBB, indice_key='sedlayer2'),
             post_act_block(32, 64, 3, 2, 1, indice_key='spconv2', conv_type='spconv'),
 
-            SEDLayer(64, sed_down_kernel_size, sed_down_stride, sed_num_SBB, indice_key='sedlayer3', bias=conv_bias),
+            SEDLayer(64, sed_down_kernel_size, sed_down_stride, sed_num_SBB, indice_key='sedlayer3'),
             post_act_block(64, sed_dim, 3, (1, 2, 2), 1, indice_key='spconv3', conv_type='spconv'),
         )
 
@@ -143,7 +142,7 @@ class HEDNet(nn.Module):
         for idx in range(sed_num_layers):
             layer = SEDLayer(
                 sed_dim, sed_down_kernel_size, sed_down_stride, sed_num_SBB,
-                indice_key=f'sedlayer{idx+4}', xy_only=kwargs.get('xy_only', False), bias=conv_bias)
+                indice_key=f'sedlayer{idx+4}', xy_only=kwargs.get('xy_only', False))
             self.sed_layers.append(layer)
 
         self.transition = spconv.SparseSequential(

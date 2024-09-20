@@ -552,6 +552,8 @@ if __name__ == '__main__':
     args = parse_config()
     root = args.root_path
     output_dir = args.output_dir
+    dataset_cfg = EasyDict(yaml.safe_load(open(args.cfg_file)))
+
     if args.func == 'create_argo2_infos':
         save_bin = True
         ts2idx, seg_path_list, seg_split_list = prepare(root)
@@ -593,12 +595,11 @@ if __name__ == '__main__':
         gts = pd.concat(seg_anno_list).reset_index()
         gts.to_feather(save_feather_path)
 
-    elif args.func == 'create_groundtruth_database':
-        dataset_cfg = EasyDict(yaml.safe_load(open(args.cfg_file)))
-        assert root.split('/')[-1] == 'argo2', f"root ends with: {root.split('/')[-1]}"
+        # create gt database
+        assert root.split('/')[-1] == 'sensor', f"root ends with: {root.split('/')[-1]}"
         argo2_dataset = Argo2Dataset(
             dataset_cfg=dataset_cfg, class_names=None,
-            root_path=Path(root),
+            root_path=Path(root[:-len('/sensor')]),
             logger=common_utils.create_logger(), training=True
         )
         argo2_dataset.create_groundtruth_database()

@@ -22,6 +22,6 @@ export OMP_NUM_THREADS=1
 
 python -m torch.distributed.launch --nproc_per_node=${NGPUS} --rdzv_endpoint=localhost:${PORT} \
     ${PROJ_ROOT}/tools/train.py --launcher pytorch --cfg_file ${CONFIG} ${PY_ARGS} \
-    --output_dir 'output' --root_dir=${PROJ_ROOT} --sync_bn --eval_map --wo_gpu_stat --dataset='waymo' \
+    --output_dir 'output' --root_dir=${PROJ_ROOT} --sync_bn --wo_gpu_stat --dataset='waymo' \
     2>&1 | tee log.train.$T
     # --dataset='waymo'/'nuscenes'/'argo2'

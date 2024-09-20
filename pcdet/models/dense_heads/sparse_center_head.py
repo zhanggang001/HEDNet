@@ -150,7 +150,7 @@ class SparseCenterHead(nn.Module):
         ret_boxes[:valid_num, 6] = torch.cos(gt_boxes[:valid_num, 6])
         ret_boxes[:valid_num, 7] = torch.sin(gt_boxes[:valid_num, 6])
         if gt_boxes.shape[1] > 8:
-            ret_boxes[:valid_num, 8:] = gt_boxes[:valid_num, 7:]
+            ret_boxes[:valid_num, 8:] = gt_boxes[:valid_num, 7:-1]
 
         return heatmap, ret_boxes, inds, mask, ret_boxes_src
 
