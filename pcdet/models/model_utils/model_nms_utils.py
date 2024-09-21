@@ -93,7 +93,7 @@ def class_specific_nms(box_scores, box_preds, box_labels, nms_config, score_thre
             curr_boxes_for_nms = cur_box_preds
 
             keep_idx, _ = getattr(iou3d_nms_utils, 'nms_gpu')(
-                curr_boxes_for_nms, curr_box_scores_nms,
+                curr_boxes_for_nms[:, :7], curr_box_scores_nms,
                 thresh=nms_config.NMS_THRESH[k],
                 pre_maxsize=nms_config.NMS_PRE_MAXSIZE[k],
                 post_max_size=nms_config.NMS_POST_MAXSIZE[k]
@@ -102,6 +102,6 @@ def class_specific_nms(box_scores, box_preds, box_labels, nms_config, score_thre
             selected.append(curr_selected)
     if len(selected) != 0:
         selected = torch.cat(selected)
-        
+
 
     return selected, box_scores[selected]

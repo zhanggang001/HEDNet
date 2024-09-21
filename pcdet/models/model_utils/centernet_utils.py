@@ -492,7 +492,7 @@ def decode_bbox_from_sparse_heatmap(
 
     box_part_list = [xs, ys, center_z, dim, angle]
     if vel is not None:
-        vel = _gather_feat_sparse(vel, inds, batch_size, batch_idx).view(batch_size, K)
+        vel = _gather_feat_sparse(vel, inds, batch_size, batch_idx)
         box_part_list.append(vel)
 
     if iou is not None:

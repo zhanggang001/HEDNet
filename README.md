@@ -2,22 +2,25 @@
 
 It is the official code release of [HEDNet (NeurIPS 2023)](https://arxiv.org/pdf/2310.20234.pdf) and [SAFDNet (CVPR 2024)](https://arxiv.org/abs/2403.05817).
 We unify the codebase for HEDNet and SAFDNet on all datasets based on OpenPCDet.
+Please note that, since we rebuilt the code, the results are slightly different from those in the original paper.
 
 ### Results on Waymo Open
 
 #### Validation set
 | Model | mAP/mAPH_L1 | mAP/mAPH_L2 | Vec_L1 | Vec_L2 | Ped_L1 | Ped_L2 | Cyc_L1 | Cyc_L2 |
 |-------------------------------------------------------------------------------------------|----------:|:-------:|:-------:|:-------:|:-------:|:-------:|:-------:|:-------:|
-| [HEDNet-1x](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/hednet_models/hednet_1f_1x_waymo.yaml)    | 81.1/79.1 | 75.0/73.0 | 80.2/79.7 | 72.3/71.9 | 79.3/76.4 | 76.4/71.9 | 79.1/78.1 | 76.2/75.3 |
-| [SAFDNet-1x](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/safdnet_models/safdnet_1f_1x_waymo.yaml) | 81.2/79.2 | 75.1/73.2 | 80.2/79.7 | 72.2/71.8 | 79.9/76.9 | 76.8/72.6 | 79.1/78.1 | 76.2/75.2 |
-| [HEDNet-2x](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/hednet_models/hednet_1f_2x_waymo.yaml)    | 81.4/79.5 | 75.3/73.4 | 81.1/80.6 | 73.2/72.7 | 84.4/80.0 | 76.8/72.6 | 78.7/77.7 | 75.8/74.9 |
-| [SAFDNet-2x](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/safdnet_models/safdnet_1f_2x_waymo.yaml) | 81.8/79.9 | 75.7/73.9 | 80.6/80.1 | 72.7/72.3 | 84.7/80.4 | 77.3/73.1 | 80.0/79.0 | 77.2/76.2 |
+| [HEDNet-1f-1x](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/hednet_models/hednet_1f_1x_waymo.yaml)    | 81.1/79.1 | 75.0/73.0 | 80.2/79.7 | 72.3/71.9 | 79.3/76.4 | 76.4/71.9 | 79.1/78.1 | 76.2/75.3 |
+| [SAFDNet-1f-1x](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/safdnet_models/safdnet_1f_1x_waymo.yaml) | 81.2/79.2 | 75.1/73.2 | 80.2/79.7 | 72.2/71.8 | 79.9/76.9 | 76.8/72.6 | 79.1/78.1 | 76.2/75.2 |
+| [HEDNet-1f-2x](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/hednet_models/hednet_1f_2x_waymo.yaml)    | 81.4/79.5 | 75.3/73.4 | 81.1/80.6 | 73.2/72.7 | 84.4/80.0 | 76.8/72.6 | 78.7/77.7 | 75.8/74.9 |
+| [SAFDNet-1f-2x](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/safdnet_models/safdnet_1f_2x_waymo.yaml) | 81.6/79.7 | 75.5/73.7 | 80.7/80.3 | 72.8/72.4 | 84.8/80.4 | 77.3/73.0 | 79.4/78.4 | 76.6/75.6 |
+| [HEDNet-4f-2x](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/hednet_models/hednet_4f_2x_waymo.yaml)    | 83.3/82.1 | 77.8/76.6 | 82.6/82.1 | 75.3/74.8 | 86.2/83.6 | 79.1/76.6 | 81.2/80.4 | 79.0/78.2 |
+| [SAFDNet-4f-2x](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/safdnet_models/safdnet_4f_2x_waymo.yaml) | 84.1/82.8 | 78.6/77.3 | 82.6/82.1 | 75.1/74.7 | 86.7/84.1 | 80.0/77.4 | 83.0/82.1 | 80.7/79.9 |
 
 ### Test set
 | Model | mAP/mAPH_L1 | mAP/mAPH_L2 | Vec_L1 | Vec_L2 | Ped_L1 | Ped_L2 | Cyc_L1 | Cyc_L2 | Submission |
 |-------|----------:|:-------:|:-------:|:-------:|:-------:|:-------:|:-------:|:-------:|:-------:|
-| HEDNet-2x | 82.2/80.2 | 76.9/75.0 | 84.2/83.8 | 77.0/76.6 | 84.1/79.7 | 78.3/74.0 | 78.2/77.0 | 75.4/74.3 | [link](https://waymo.com/open/challenges/detection-3d/results/6a0c9b2c-7ae6/1694521910913280/)
-| SAFDNet-2x | 81.9/79.8 | 76.5/74.6 | 83.9/83.5 | 76.6/76.2 | 84.3/79.8 | 78.3/74.1 | 77.5/76.3 | 74.6/73.4 | [link](https://waymo.com/open/challenges/detection-3d/results/ae022fcb-9223/1700186617972208/) |
+| HEDNet-1f-2x | 82.2/80.2 | 76.9/75.0 | 84.2/83.8 | 77.0/76.6 | 84.1/79.7 | 78.3/74.0 | 78.2/77.0 | 75.4/74.3 | [link](https://waymo.com/open/challenges/detection-3d/results/6a0c9b2c-7ae6/1694521910913280/)
+| SAFDNet-1f-2x | 81.9/79.8 | 76.5/74.6 | 83.9/83.5 | 76.6/76.2 | 84.3/79.8 | 78.3/74.1 | 77.5/76.3 | 74.6/73.4 | [link](https://waymo.com/open/challenges/detection-3d/results/ae022fcb-9223/1700186617972208/) |
 
 We could not provide the above pretrained models due to [Waymo Dataset License Agreement](https://waymo.com/open/terms/).
 
@@ -30,15 +33,13 @@ We could not provide the above pretrained models due to [Waymo Dataset License A
 | [HEDNet](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/hednet_models/hednet_20e_nusences.yaml)  | 27.2 | 25.1 | 26.5 |	25.7 | 18.0 | 67.1 | 71.3 | [ckpt](https://cloud.tsinghua.edu.cn/f/02fb0bb6e1f5443cba2d/?dl=1) & [log](https://cloud.tsinghua.edu.cn/f/8de86777f8974bd893b4/?dl=1)|
 | [SAFDNet](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/safdnet_models/safdnet_20e_nuscenes.yaml)        | 27.3 | 25.3 | 27.1 |	25.2 | 18.3 | 66.6 | 71.0 | [ckpt](https://cloud.tsinghua.edu.cn/f/92e8977759ce41259980/?dl=1) & [log](https://cloud.tsinghua.edu.cn/f/143cdb06d6254dd7846e/?dl=1) |
 
-<!-- | [HEDNet](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/hednet_models/hednet_20e_nusences.yaml)  | 27.2 | 25.1 | 26.5 |	25.7 | 18.0 | 67.1 | 71.3 | [ckpt](https://cloud.tsinghua.edu.cn/f/4c1880be8453468baa4c/?dl=1) & [log](https://cloud.tsinghua.edu.cn/f/d31fb828452449a49700/?dl=1)|
-| [SAFDNet](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/safdnet_models/safdnet_20e_nuscenes.yaml)        | 27.3 | 25.3 | 27.1 |	25.2 | 18.3 | 66.6 | 71.0 | [ckpt](https://cloud.tsinghua.edu.cn/f/5a327be6f8a440fd9d22/?dl=1) & [log](https://cloud.tsinghua.edu.cn/f/25c72526e9ad4f95851b/?dl=1) | -->
-
 #### Test set
 |Model| mATE | mASE | mAOE | mAVE | mAAE | mAP | NDS | Submission |
 |---|-------:|:------:|:------:|:-----:|:-----:|:-----:|:------:|:----:|
 | HEDNet | 25.0 | 23.8 | 31.7 | 24.0 | 13.0 | 67.5 | 72.0 | [json](https://cloud.tsinghua.edu.cn/f/afc2275bdbef4ae4ac11/?dl=1) |
 | SAFDNet | 25.1 | 24.2 | 31.1 | 25.8 | 12.7 | 68.3 | 72.3 | [json](https://cloud.tsinghua.edu.cn/f/6b254feee21445318e0f/?dl=1) |
 
+**Note**: We originally implemented HEDNet on the nuScenes dataset using MMDetection3D. The TransFusion-L in OpenPCDet which uses the hierarchical 3D SECOND as its backbone achieves worse results than that in MMDetection3D. To unify the codebase, we release a single-stride 2D version for both HEDNet and SAFDNet on the nuScenes dataset. This version differs from the hierarchical 3D version described in the original paper but achieves similar results.
 
 ### Results on Argoverse2
 
