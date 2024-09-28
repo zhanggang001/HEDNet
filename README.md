@@ -31,7 +31,7 @@ We could not provide the above pretrained models due to [Waymo Dataset License A
 |Model|   mATE |  mASE  |  mAOE  | mAVE  | mAAE  |  mAP  |  NDS   |  Checkpoint |
 |----------------------------------------------------------------------------------------------------|-------:|:------:|:------:|:-----:|:-----:|:-----:|:------:|:--------------------------------------------------------------------------------------------------:|
 | [HEDNet](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/hednet_models/hednet_20e_nusences.yaml)  | 27.2 | 25.1 | 26.5 |	25.7 | 18.0 | 67.1 | 71.3 | [ckpt](https://cloud.tsinghua.edu.cn/f/02fb0bb6e1f5443cba2d/?dl=1) & [log](https://cloud.tsinghua.edu.cn/f/8de86777f8974bd893b4/?dl=1)|
-| [SAFDNet](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/safdnet_models/safdnet_20e_nuscenes.yaml)        | 27.3 | 25.3 | 27.1 |	25.2 | 18.3 | 66.6 | 71.0 | [ckpt](https://cloud.tsinghua.edu.cn/f/92e8977759ce41259980/?dl=1) & [log](https://cloud.tsinghua.edu.cn/f/143cdb06d6254dd7846e/?dl=1) |
+| [SAFDNet](https://github.com/zhanggang001/HEDNet/blob/main/tools/cfgs/safdnet_models/safdnet_20e_nuscenes.yaml)        | 27.1 | 26.0 | 28.0 |	24.8 | 18.1 | 67.0 | 71.1 | [ckpt](https://cloud.tsinghua.edu.cn/f/92e8977759ce41259980/?dl=1) & [log](https://cloud.tsinghua.edu.cn/f/143cdb06d6254dd7846e/?dl=1) |
 
 #### Test set
 |Model| mATE | mASE | mAOE | mAVE | mAAE | mAP | NDS | Submission |

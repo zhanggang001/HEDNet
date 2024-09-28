@@ -394,9 +394,6 @@ def draw_gaussian_to_normalized_heatmap(heatmap, center, radius, valid_mask=None
     diameter = 2 * radius + 1
     gaussian = gaussian2D((diameter, diameter), sigma=diameter / 6)
 
-    if normalize and gaussian.max() > 0:
-        gaussian /= gaussian.max()
-
     x, y = int(center[0]), int(center[1])
     height, width = heatmap.shape[0:2]
     left, right = min(x, radius), min(width - x, radius + 1)
@@ -411,6 +408,8 @@ def draw_gaussian_to_normalized_heatmap(heatmap, center, radius, valid_mask=None
         if valid_mask is not None:
             cur_valid_mask = valid_mask[y - top:y + bottom, x - left:x + right]
             masked_gaussian = masked_gaussian * cur_valid_mask.float()
+            if normalize and masked_gaussian.max() > 0.:
+                masked_gaussian /= masked_gaussian.max()
         torch.max(masked_heatmap, masked_gaussian, out=masked_heatmap)
 
     return heatmap
