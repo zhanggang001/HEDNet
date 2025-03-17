@@ -114,8 +114,8 @@ class SparseCenterHead(nn.Module):
         x, y, z = gt_boxes[:, 0], gt_boxes[:, 1], gt_boxes[:, 2]
         coord_x = (x - self.point_cloud_range[0]) / self.voxel_size[0] / feature_map_stride
         coord_y = (y - self.point_cloud_range[1]) / self.voxel_size[1] / feature_map_stride
-        coord_x = torch.clamp(coord_x, min=0, max=feature_map_size[0] - 0.5)
-        coord_y = torch.clamp(coord_y, min=0, max=feature_map_size[1] - 0.5)
+        coord_x = torch.clamp(coord_x, min=0, max=feature_map_size[1] - 0.5)
+        coord_y = torch.clamp(coord_y, min=0, max=feature_map_size[0] - 0.5)
         center = torch.cat((coord_x[:, None], coord_y[:, None]), dim=-1)
         center_int = center.int()
 
